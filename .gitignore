@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data — never commit MIMIC raw data (PhysioNet DUA)
+data/raw/
+data/processed/
+data/interim/
+*.csv
+*.csv.gz
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+
+# Keep synthetic data and small test fixtures
+!data/synthetic/
+!tests/fixtures/
+
+# Models and artifacts (recursive — covers models/ and any subdirectory)
+models/**/*.joblib
+models/*.joblib
+models/**/*.pkl
+models/*.pkl
+models/**/*.json
+models/*.json
+*.onnx
+
+# Reports — figures recursive (covers reports/figures/ and reports/baseline/figures/)
+reports/**/*.png
+reports/**/*.pdf
+reports/figures/*.png
+reports/figures/*.pdf
+!reports/figures/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Environment / secrets
+.env
+.env.local
+config.local.py
+
+# Internal working notes (Decisions log, roadmap, EDA findings, gotchas).
+# Public-facing overview lives in README.md.
+CLAUDE.md
+
+# OS
+Thumbs.db
+desktop.ini
