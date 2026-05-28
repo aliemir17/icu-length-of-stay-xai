@@ -1,5 +1,15 @@
 # ICU Length of Stay — Explainable AI
 
+![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5-F7931E?logo=scikit-learn&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-2.1-FF6600)
+![LightGBM](https://img.shields.io/badge/LightGBM-4.5-1B7AC2)
+![SHAP](https://img.shields.io/badge/SHAP-XAI-7E5BEF)
+![LIME](https://img.shields.io/badge/LIME-XAI-9B59B6)
+![MIMIC-IV](https://img.shields.io/badge/data-MIMIC--IV%203.1-005EB8)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Thesis](https://img.shields.io/badge/B.Sc.%20thesis-ITU%20IE-red)
+
 B.Sc. thesis project (ITU Industrial Engineering, **final submission 2026-06-08**): predict ICU length of stay from early-admission clinical data and explain each prediction with three independent XAI methods.
 
 **Team:** Ali Emir İBİCİ, Mete Berk TUNÇER, Ali AVCI
