@@ -164,7 +164,7 @@ Full per-improvement details with before/after tables in `CLAUDE.md` § Model Im
 
 ---
 
-## Explainability findings (thesis centerpiece)
+## Explainability findings 
 
 **Three XAI methods, four models, two tasks = 12 global rankings + per-patient local explanations.**
 
