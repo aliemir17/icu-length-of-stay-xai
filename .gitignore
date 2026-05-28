@@ -50,12 +50,11 @@ models/**/*.json
 models/*.json
 *.onnx
 
-# Reports — figures recursive (covers reports/figures/ and reports/baseline/figures/)
-reports/**/*.png
-reports/**/*.pdf
-reports/figures/*.png
-reports/figures/*.pdf
-!reports/figures/.gitkeep
+# Reports
+# Figures ARE tracked — they're the thesis showcase output and small (<10 MB total).
+# Only exclude temporary or oversized files.
+reports/**/*.tmp
+reports/**/*.log
 
 # Logs
 *.log
