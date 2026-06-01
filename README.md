@@ -160,8 +160,6 @@ Iterative improvements from the Phase 1 baseline to the final model, each measur
 - Best classifier: XGB test AUC-PR **0.440 → 0.462** (+0.022, +5 %)
 - Linear classifier: AUC-PR **0.300 → 0.352** (+17 %, biggest single jump from feature engineering)
 
-Full per-improvement details with before/after tables in `CLAUDE.md` § Model Improvements (gitignored internal notes).
-
 ---
 
 ## Explainability findings 
