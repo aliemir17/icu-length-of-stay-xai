@@ -207,7 +207,7 @@ Linear model's Ridge coefficients favor lab values (lactate, pH, bilirubin) whil
 - **Confusion matrices** at default 0.5 + optimal F1 threshold per model (XGB: threshold 0.526 → recall 54.1 % for long-stay)
 - **Mean predictor baseline**: MAE 2.553 d, R² -0.043 — best ML model beats it by **0.385 days** (15 %)
 - **Majority-class classification baseline**: 87.2 % accuracy but F1 = 0 — confirms why AUC-PR is the right metric
-- **SAPS-II clinical baseline**: deferred to Fall 2026 thesis extension (requires GCS, urinary output, bicarbonate — needs cache rebuild)
+
 
 ---
 
