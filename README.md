@@ -22,12 +22,12 @@ B.Sc. thesis project (ITU Industrial Engineering, **final submission 2026-06-08*
 
 ### Headline metrics (test set, N = 9,645)
 
-| Task | Best model | Metric | Value | vs Mean baseline |
+| Task | Best model | Test metric | Naive baseline | Improvement |
 |---|---|---|---|---|
-| Regression (log1p target) | **LGBM** | Test MAE | **2.168 days** | -0.385 d |
-| Regression (raw days) | LGBM | Test MAE | 2.456 d | — |
-| Classification — 7-day long stay (**main**) | **XGB** | Test AUC-PR | **0.462** | +0.334 vs majority |
-| Classification — 4.06-day cohort-mean (*comparison*) | XGB | Test AUC-PR | 0.596 | +0.334 vs majority |
+| Regression (log1p target) | **LGBM** | MAE **2.168 d** | Mean predictor: 2.553 d (R² −0.043) | **−0.385 d** |
+| Regression (raw days) | LGBM | MAE 2.456 d | Mean predictor: 2.553 d | −0.097 d |
+| Classification — 7-day long stay (**main**) | **XGB** | AUC-PR **0.462** | Majority class: 0.128 (= 12.8 % prevalence; F1 = 0, acc 87.2 %) | **+0.334** |
+| Classification — 4.06-day cohort-mean (*ablation*) | XGB | AUC-PR 0.596 | Majority class: 0.262 (= 26.2 % prevalence) | +0.334 |
 
 > **Two classification thresholds, one main target.** The 7-day rule is the clinical convention used throughout (SHAP, LIME, permutation, calibration, subgroup fairness). The 4.06-day cohort-mean threshold is reported as an **ablation** so the thesis can show how class balance alone — 87/13 at 7-day vs 74/26 at 4.06-day — drives AUC-PR. The 4.06-day numbers are not used downstream; same models, retrained at the new cutoff, on the identical test split.
 
@@ -39,6 +39,7 @@ B.Sc. thesis project (ITU Industrial Engineering, **final submission 2026-06-08*
 - **Three independent XAI methods**: SHAP (TreeSHAP), LIME, permutation importance — all four models, regression + classification.
 - **Calibration + confusion matrix + baselines**: clinically reliable probabilities, optimal F1 threshold per model.
 - **Subgroup + fairness analysis**: sepsis, age, gender, race, insurance — 5 axes, all 4 models.
+- **Interactive what-if dashboard** ([dashboard/app.py](dashboard/app.py)): Streamlit prototype loading the two headline pipelines (LGBM regression + XGB 7-day classification). Pick a real test-set patient, edit demographics + every vital / lab mean (each with a `✓ Measured` toggle), inspect Original vs What-if predictions side-by-side and a per-feature SHAP waterfall for each model.
 
 ---
 
@@ -101,6 +102,8 @@ python -m src.explain.shap_explain --source mimic4
 MIMIC-IV requires PhysioNet credentialed access (DUA + CITI training).
 
 ### Dashboard (what-if analysis)
+
+![Dashboard screenshot — sidebar with patient picker + Demographics / Labs expanders open, main panel showing Original vs What-if predictions and the LGBM SHAP waterfall](reports/figures/dashboard_screenshot.png)
 
 A Streamlit prototype lives in `dashboard/app.py`. Loads the project's best two pipelines — **LGBM regression** (log1p target) and **XGB classification** at the 7-day threshold — and lets the user pick a real test-set patient, edit demographics + every vital and lab mean (21 fields with an explicit "✓ Measured" toggle) + 3 top-SHAP vital slopes, and inspect the prediction + a per-feature SHAP waterfall for both models side-by-side against the unedited "Original" prediction.
 
