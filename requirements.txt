@@ -15,6 +15,9 @@ shap>=0.45,<0.47
 matplotlib>=3.8
 seaborn>=0.13
 
+# Dashboard (what-if analysis UI)
+streamlit>=1.40
+
 # Notebook
 jupyter>=1.0
 ipykernel>=6.29

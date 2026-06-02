@@ -69,6 +69,10 @@ config.local.py
 # Public-facing overview lives in README.md.
 CLAUDE.md
 
+# Thesis-writing handoff (numbers, decisions, paths bundled for Claude Desktop).
+# Not for the public repo — same rationale as CLAUDE.md.
+THESIS_HANDOFF.md
+
 # OS
 Thumbs.db
 desktop.ini

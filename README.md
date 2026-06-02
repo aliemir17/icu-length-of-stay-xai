@@ -26,13 +26,16 @@ B.Sc. thesis project (ITU Industrial Engineering, **final submission 2026-06-08*
 |---|---|---|---|---|
 | Regression (log1p target) | **LGBM** | Test MAE | **2.168 days** | -0.385 d |
 | Regression (raw days) | LGBM | Test MAE | 2.456 d | — |
-| Classification (>=7d long stay) | **XGB** | Test AUC-PR | **0.462** | +0.334 vs majority |
+| Classification — 7-day long stay (**main**) | **XGB** | Test AUC-PR | **0.462** | +0.334 vs majority |
+| Classification — 4.06-day cohort-mean (*comparison*) | XGB | Test AUC-PR | 0.596 | +0.334 vs majority |
+
+> **Two classification thresholds, one main target.** The 7-day rule is the clinical convention used throughout (SHAP, LIME, permutation, calibration, subgroup fairness). The 4.06-day cohort-mean threshold is reported as an **ablation** so the thesis can show how class balance alone — 87/13 at 7-day vs 74/26 at 4.06-day — drives AUC-PR. The 4.06-day numbers are not used downstream; same models, retrained at the new cutoff, on the identical test split.
 
 ### What we built
 
 - **Source-agnostic pipeline**: same code runs on synthetic data and on the full credentialed MIMIC-IV 3.1 release (chunked readers for 433 M chartevents + 158 M labevents rows).
 - **152-feature cohort dataset**: vital signs (7 concepts × 5 aggregations = 35), labs (14 × 5 = 70), demographics (5), missing-indicators (40), measurement-counts (2).
-- **4 models × 3 tasks**, all Optuna-tuned: Linear (Ridge / Logistic), Random Forest, XGBoost, LightGBM.
+- **4 models × 4 tasks**, all Optuna-tuned: Linear (Ridge / Logistic), Random Forest, XGBoost, LightGBM. Tasks: log1p regression, raw-days regression, 7-day classification (main), 4.06-day classification (ablation).
 - **Three independent XAI methods**: SHAP (TreeSHAP), LIME, permutation importance — all four models, regression + classification.
 - **Calibration + confusion matrix + baselines**: clinically reliable probabilities, optimal F1 threshold per model.
 - **Subgroup + fairness analysis**: sepsis, age, gender, race, insurance — 5 axes, all 4 models.
@@ -59,6 +62,7 @@ B.Sc. thesis project (ITU Industrial Engineering, **final submission 2026-06-08*
 │   ├── features/    # Preprocessing + feature engineering (missing-indicators)
 │   ├── models/      # Training + Optuna tuning
 │   └── explain/     # SHAP global explainability (standalone CLI)
+├── dashboard/       # Streamlit what-if analysis prototype (LGBM + XGB + SHAP)
 ├── models/          # Trained model artifacts + baseline snapshot (gitignored)
 ├── reports/
 │   ├── figures/     # ~70 PNG figures across all notebooks
@@ -96,6 +100,20 @@ python -m src.explain.shap_explain --source mimic4
 
 MIMIC-IV requires PhysioNet credentialed access (DUA + CITI training).
 
+### Dashboard (what-if analysis)
+
+A Streamlit prototype lives in `dashboard/app.py`. Loads the project's best two pipelines — **LGBM regression** (log1p target) and **XGB classification** at the 7-day threshold — and lets the user pick a real test-set patient, edit demographics + every vital and lab mean (21 fields with an explicit "✓ Measured" toggle) + 3 top-SHAP vital slopes, and inspect the prediction + a per-feature SHAP waterfall for both models side-by-side against the unedited "Original" prediction.
+
+```powershell
+streamlit run dashboard/app.py
+```
+
+Six stratified preset patients (2 short-stay / 2 long-stay / 2 sepsis-positive) ship with the app; each was hand-picked from the test set under the rule **|model error| < 1.5 d AND no missing features**, so SHAP attributions are clean. A "Random patient" button pulls any other test-set stay.
+
+**Measurement-intent UX.** Every vital and lab `_mean` field carries an explicit `✓ Measured` toggle. Switching it off blanks the value to NaN (the pipeline imputer fills it downstream) and — for the four lab means that have a `_missing` indicator in the model (`lactate`, `bilirubin`, `ph`, `inr`) — flips the paired indicator. The `n_vitals_measured` / `n_labs_measured` features are recomputed live from the toggle state and shown in a sidebar caption (`vitals N/7, labs M/14`).
+
+Not a medical device. Research demo only.
+
 ---
 
 ## Approach
@@ -123,7 +141,7 @@ n_vitals_measured + n_labs_measured (acuity counts)           =  2
                                                               = 152
 ```
 
-`race` and `insurance` are in the dataframe for fairness analysis but in `EXCLUDE_COLS` (never reach the model).
+Demographic features (`age`, `gender`, `admission_type`, `race`, `insurance`) **are** used by the model and also serve as the stratification axes for the fairness analysis. The columns in `EXCLUDE_COLS` are IDs, timestamps, outcome flags (`hospital_expire_flag`, `died_in_icu`), the sepsis flag (used only for subgroup eval), and the target itself.
 
 ### Models
 
@@ -203,11 +221,23 @@ Linear model's Ridge coefficients favor lab values (lactate, pH, bilirubin) whil
 
 ## Validation rigor
 
-- **Calibration plots** for all 4 classifiers — tree models well-calibrated, linear is somewhat overconfident
-- **Confusion matrices** at default 0.5 + optimal F1 threshold per model (XGB: threshold 0.526 → recall 54.1 % for long-stay)
+- **Calibration plots** for all 4 classifiers (both thresholds) — tree models well-calibrated, linear is somewhat overconfident
+- **Confusion matrices** at default 0.5 + optimal F1 threshold per model
+  - 7-day (main): XGB threshold **0.525** → long-stay recall 54.3 %; LGBM threshold 0.532 → recall 57.0 %
+  - 4.06-day (ablation): XGB threshold **0.480** → long-stay recall 62.9 %; LGBM threshold 0.469 → recall 65.6 %
 - **Mean predictor baseline**: MAE 2.553 d, R² -0.043 — best ML model beats it by **0.385 days** (15 %)
 - **Majority-class classification baseline**: 87.2 % accuracy but F1 = 0 — confirms why AUC-PR is the right metric
 
+### Threshold ablation (same models, same test split)
+
+| Model | AUC-PR 7d | AUC-PR 4.06d | F1 7d (opt thr) | F1 4.06d (opt thr) |
+|---|---:|---:|---:|---:|
+| Linear | 0.352 | 0.518 | 0.412 (thr=0.647) | 0.517 (thr=0.484) |
+| RF     | 0.424 | 0.560 | 0.447 (thr=0.406) | 0.542 (thr=0.401) |
+| XGB    | **0.462** | **0.596** | **0.475** (thr=0.525) | **0.566** (thr=0.480) |
+| LGBM   | 0.455 | 0.595 | 0.477 (thr=0.532) | 0.562 (thr=0.469) |
+
+The +0.13 to +0.17 jump in AUC-PR comes from class balance alone (positive share 12.8 % → 26.2 %), not better learning. We keep 7-day as the primary target because (a) it matches clinical planning units used in the literature (Hempel et al.), and (b) the 4.06-day cutoff is a moving target — it shifts with cohort changes.
 
 ---
 

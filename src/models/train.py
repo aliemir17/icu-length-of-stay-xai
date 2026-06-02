@@ -46,19 +46,21 @@ from src.config import FIGURES_DIR, MODELS_DIR, RANDOM_SEED, REPORTS_DIR, TARGET
 from src.data.load import load_icu_stays
 from src.features.build import build_preprocessor, split_xy
 
-# Long-stay threshold for binary classification (days)
+# Long-stay thresholds for binary classification (days)
+# - 7.0  : clinical convention (weekly planning unit, Hempel et al.)
+# - 4.06 : cohort mean LoS — statistically motivated, more balanced classes
 LONG_STAY_DAYS = 7.0
+LONG_STAY_DAYS_MEAN = 4.063534  # actual cohort mean (full MIMIC-IV 3.1)
 
 TABLES_DIR = REPORTS_DIR / "tables"
 TABLES_DIR.mkdir(parents=True, exist_ok=True)
 
-TASKS = ("regression", "regression_raw", "classification")
+TASKS = ("regression", "regression_raw", "classification", "classification_mean")
 MODELS = ("linear", "rf", "xgb", "lgbm")
 
-# Class-imbalance multiplier for the XGB positive class.
-# scale_pos_weight = N_neg / N_pos. Full MIMIC-IV 3.1 cohort (N=48,222) at the
-# 7-day threshold gives 87.2 % short / 12.8 % long -> 87.2 / 12.8 = 6.81.
-# Previously 5.06 (demo's 84/16); refreshed 2026-05-27.
+# Default placeholder; the actual scale_pos_weight is now computed dynamically
+# from the training y at fit time (because the two classification thresholds
+# yield very different class ratios). See _compute_spw().
 _SCALE_POS_WEIGHT = 6.81
 
 
@@ -68,7 +70,7 @@ _SCALE_POS_WEIGHT = 6.81
 
 def make_model(name: str, task: str):
     """Return an unfitted sklearn-compatible estimator for the (model, task)."""
-    is_clf = task == "classification"
+    is_clf = task in ("classification", "classification_mean")
 
     if name == "linear":
         if is_clf:
@@ -157,6 +159,8 @@ def prepare_target(y_days: pd.Series, task: str) -> pd.Series:
         return y_days.copy()
     if task == "classification":
         return (y_days >= LONG_STAY_DAYS).astype(int)
+    if task == "classification_mean":
+        return (y_days >= LONG_STAY_DAYS_MEAN).astype(int)
     raise ValueError(f"Unknown task: {task!r}")
 
 
@@ -199,9 +203,13 @@ def classification_metrics(y_true, y_pred, y_proba) -> dict:
     }
 
 
+def _is_classification(task: str) -> bool:
+    return task in ("classification", "classification_mean")
+
+
 def score_on(pipe, X, y_true, task: str) -> dict:
     """Predict + score, taking care of the regression target inversion."""
-    if task == "classification":
+    if _is_classification(task):
         y_pred = pipe.predict(X)
         y_proba = pipe.predict_proba(X)[:, 1]
         return classification_metrics(y_true, y_pred, y_proba)
@@ -216,7 +224,7 @@ def score_on(pipe, X, y_true, task: str) -> dict:
 
 def cv_score(pipe_factory, X, y, task: str, n_splits: int = 5) -> list[dict]:
     """5-fold CV with task-appropriate splitter. Re-instantiates the pipeline per fold."""
-    if task == "classification":
+    if _is_classification(task):
         splitter = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_SEED)
         split_y = y
     else:
@@ -253,20 +261,30 @@ def train_one(source: str, task: str, model_name: str) -> RunResult:
     X, y_raw, numeric_cols, categorical_cols = split_xy(df)
     y = prepare_target(y_raw, task)
 
-    stratify = y if task == "classification" else None
+    stratify = y if _is_classification(task) else None
     X_tr, X_te, y_tr, y_te = train_test_split(
         X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=stratify,
     )
 
-    factory = lambda: make_pipeline(model_name, task, numeric_cols, categorical_cols)
-    folds = cv_score(factory, X_tr, y_tr, task)
+    # For XGB classifier, override scale_pos_weight from the actual training
+    # class ratio (the two classification tasks have very different ratios:
+    # 87/13 at 7-day vs ~60/40 at 4.06-day mean threshold).
+    def _factory():
+        pipe = make_pipeline(model_name, task, numeric_cols, categorical_cols)
+        if model_name == "xgb" and _is_classification(task):
+            n_pos = max(int(y_tr.sum()), 1)
+            n_neg = len(y_tr) - n_pos
+            pipe.named_steps["model"].set_params(scale_pos_weight=n_neg / n_pos)
+        return pipe
+
+    folds = cv_score(_factory, X_tr, y_tr, task)
 
     metric_keys = [k for k in folds[0] if k != "fold"]
     cv_mean = {k: float(np.mean([f[k] for f in folds])) for k in metric_keys}
     cv_std = {k: float(np.std([f[k] for f in folds])) for k in metric_keys}
 
     # Final refit on full train, evaluate on held-out test
-    pipe = factory()
+    pipe = _factory()
     pipe.fit(X_tr, y_tr)
     test_metrics = score_on(pipe, X_te, y_te.values, task)
 
