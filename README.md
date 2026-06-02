@@ -160,8 +160,6 @@ Iterative improvements from the Phase 1 baseline to the final model, each measur
 - Best classifier: XGB test AUC-PR **0.440 → 0.462** (+0.022, +5 %)
 - Linear classifier: AUC-PR **0.300 → 0.352** (+17 %, biggest single jump from feature engineering)
 
-Full per-improvement details with before/after tables in `CLAUDE.md` § Model Improvements (gitignored internal notes).
-
 ---
 
 ## Explainability findings 
@@ -209,7 +207,7 @@ Linear model's Ridge coefficients favor lab values (lactate, pH, bilirubin) whil
 - **Confusion matrices** at default 0.5 + optimal F1 threshold per model (XGB: threshold 0.526 → recall 54.1 % for long-stay)
 - **Mean predictor baseline**: MAE 2.553 d, R² -0.043 — best ML model beats it by **0.385 days** (15 %)
 - **Majority-class classification baseline**: 87.2 % accuracy but F1 = 0 — confirms why AUC-PR is the right metric
-- **SAPS-II clinical baseline**: deferred to Fall 2026 thesis extension (requires GCS, urinary output, bicarbonate — needs cache rebuild)
+
 
 ---
 
@@ -307,13 +305,3 @@ Per `(stay_id, concept)`, within the first-24h window, five statistics are compu
 - ✅ XAI centerpiece: SHAP + LIME + permutation, cross-method agreement
 - ✅ Validation: calibration, confusion matrix, baselines
 - ✅ Subgroup analysis: 5 fairness axes
-
-**Next** — Phase 6-7 (thesis writing + polish):
-- Extend interim report with Methodology, Results, Discussion sections
-- Figure quality check, citation verification
-- Final submission **2026-06-08**
-
-**Deferred to Fall 2026 thesis extension (Faz 2):**
-- SAPS-II clinical baseline (requires GCS, PaO2/FiO2, urinary output, bicarbonate, chronic disease flags — additional MIMIC tables + cache rebuild)
-- Comorbidity features (Charlson index from diagnoses_icd)
-- Sepsis-specific dedicated model
