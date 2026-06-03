@@ -12,8 +12,6 @@
 
 B.Sc. thesis project (ITU Industrial Engineering, **final submission 2026-06-08**): predict ICU length of stay from early-admission clinical data and explain each prediction with three independent XAI methods.
 
-**Team:** Ali Emir İBİCİ, Mete Berk TUNÇER, Ali AVCI
-**Supervisor:** Mehmet Yasin ULUKUŞ
 **Data:** MIMIC-IV 3.1 (credentialed full release, 48,222 ICU stays after cohort filters). A synthetic data path is retained for pipeline development without DUA access.
 
 ---
