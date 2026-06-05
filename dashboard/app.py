@@ -552,9 +552,7 @@ def build_sidebar(X_te: pd.DataFrame, meta: pd.DataFrame) -> tuple[int, pd.DataF
         measure_key = f"{prefix}{col}__measured"
 
         if measure_key in st.session_state:
-            # Explicit toggle drives the measurement intent. `flag` may be None
-            # (no `_missing` counterpart) — that's fine; the NaN value alone is
-            # the signal and the count features get recomputed below.
+            # Explicit toggle drives the measurement intent.
             is_measured = bool(st.session_state[measure_key])
             widget_val = float(st.session_state[value_key])
 
@@ -567,13 +565,29 @@ def build_sidebar(X_te: pd.DataFrame, meta: pd.DataFrame) -> tuple[int, pd.DataF
                         f"`{flag}` flipped to 0 to reflect the new value."
                     )
             else:
-                edited_row.at[edited_row.index[0], col] = np.nan
-                if flag is not None and originally_measured:
-                    edited_row.at[edited_row.index[0], flag] = 1
-                    notes.append(
-                        f"`{col}` is being marked as unmeasured; "
-                        f"`{flag}` set to 1 and the value will be median-imputed by the pipeline."
-                    )
+                # CONCEPT-LEVEL unmeasurement: a clinical "this lab/vital was
+                # not drawn at all" event blanks every aggregation, not just
+                # the mean. Set min/max/mean/std/slope to NaN for this concept
+                # and flip every paired `_missing` flag to 1.
+                concept = col[: -len("_mean")] if col.endswith("_mean") else col
+                blanked: list[str] = []
+                flipped: list[str] = []
+                for agg in ("min", "max", "mean", "std", "slope"):
+                    agg_col = f"{concept}_{agg}"
+                    if agg_col not in edited_row.columns:
+                        continue
+                    edited_row.at[edited_row.index[0], agg_col] = np.nan
+                    blanked.append(agg_col)
+                    agg_flag = missing_flag_col(agg_col, edited_row.columns)
+                    if agg_flag is not None:
+                        edited_row.at[edited_row.index[0], agg_flag] = 1
+                        flipped.append(agg_flag)
+                notes.append(
+                    f"`{concept}` marked as unmeasured: blanked "
+                    f"{len(blanked)} aggregations ({', '.join(blanked)}) to NaN. "
+                    + (f"`_missing` flags set to 1: {', '.join(flipped)}."
+                       if flipped else "(no `_missing` flags for this concept.)")
+                )
         else:
             # No toggle (age, vital slopes) — plain edit.
             widget_val = float(st.session_state[value_key])
